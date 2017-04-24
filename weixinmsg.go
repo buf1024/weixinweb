@@ -1,5 +1,7 @@
 package weixinweb
 
+import "encoding/xml"
+
 const (
 	MsgText       = 1     // 文本消息
 	MsgPicture    = 3     // 图片消息
@@ -21,19 +23,19 @@ const (
 	MsgRevoke     = 10002 // 撤回消息
 )
 
-type baseRequest struct {
+type wxBaseRequest struct {
 	Uin      string
 	Sid      string
 	Skey     string
 	DeviceID string
 }
 
-type baseResponse struct {
+type wxBaseResponse struct {
 	Ret    int
 	ErrMsg string
 }
 
-type member struct {
+type wxMember struct {
 	Uin             int
 	UserName        string
 	NickName        string
@@ -47,14 +49,14 @@ type member struct {
 	KeyWord         string
 }
 
-type user struct {
+type wxUser struct {
 	Uin               int
 	UserName          string
 	NickName          string
 	HeadImgUrl        string
 	ContactFlag       int
 	MemberCount       int
-	MemberList        []member
+	MemberList        []wxMember
 	RemarkName        string
 	HideInputBarFlag  int
 	Sex               int
@@ -93,32 +95,43 @@ type wxSyncKey struct {
 	List  []wxSyncKeyVal
 }
 
-type article struct {
+type wxArticle struct {
 	Title  string
 	Digest string
 	Cover  string
 	Url    string
 }
-type subscribeMsg struct {
+type wxSubscribeMsg struct {
 	UserName       string
 	MPArticleCount int
-	MPArticleList  []article
+	MPArticleList  []wxArticle
 	Time           int64
 	NickName       string
 }
 
 //////////////////
 
-type wxReq struct {
-	BaseRequest *baseRequest
+type wxLoginPageRsp struct {
+	XMLName     xml.Name `xml:"error"`
+	Ret         int      `xml:"ret"`
+	Message     string   `xml:"message"`
+	Skey        string   `xml:"skey"`
+	Wxsid       string   `xml:"wxsid"`
+	Wxuin       string   `xml:"wxuin"`
+	PassTicket  string   `xml:"pass_ticket"`
+	IsGrayscale int      `xml:"isgrayscale"`
 }
 
-type wxRsp struct {
-	BaseResponse        *baseResponse
+type wxInitReq struct {
+	BaseRequest wxBaseRequest
+}
+
+type wxInitRsp struct {
+	BaseResponse        wxBaseResponse
 	Count               int
-	ContactList         []user
+	ContactList         []wxUser
 	SyncKey             wxSyncKey
-	User                user
+	User                wxUser
 	ChatSet             string
 	SKey                string
 	ClientVersion       int64
@@ -126,28 +139,111 @@ type wxRsp struct {
 	GrayScale           int
 	InviteStartCount    int
 	MPSubscribeMsgCount int
-	MPSubscribeMsgList  []subscribeMsg
+	MPSubscribeMsgList  []wxSubscribeMsg
 	ClickReportInterval int
 	MsgID               string
 }
 
 type wxStatusNotifyReq struct {
-	BaseRequest  *baseRequest
+	BaseRequest  wxBaseRequest
 	Code         int
 	FromUserName string
 	ToUserName   string
 	ClientMsgId  int64
 }
+type wxStatusNotifyRsp struct {
+	wxInitRsp
+}
+
+type wxGetContactReq struct {
+	BaseRequest wxBaseRequest
+}
+type wxGetContactRsp struct {
+	wxInitRsp
+}
+type wxGetBatchContactReq struct {
+	BaseRequest wxBaseRequest
+	Count       int
+	List        []struct {
+		UserName        string
+		EncryChatRoomId string
+	}
+}
+type wxGetBatchContactRsp struct {
+	wxInitRsp
+}
+
 type wxSyncReq struct {
-	BaseRequest *baseRequest
+	BaseRequest *wxBaseRequest
 	SyncKey     wxSyncKey
 	RR          int64 `json:"rr"`
 }
 
 type wxSyncCheckReq struct {
-	BaseRequest  *baseRequest
+	BaseRequest  *wxBaseRequest
 	Code         int
 	FromUserName string
 	ToUserName   string
 	ClientMsgId  int64
+}
+
+type wxSyncRsp struct {
+	BaseResponse           wxBaseResponse
+	SyncKey                wxSyncKey
+	ContinueFlag           int
+	AddMsgCount            int
+	AddMsgList             wxMsg
+	ModChatRoomMemberCount int
+	ModContactList         string //TODO
+	DelContactList         string //TODO
+	ModChatRoomMemberList  string //TODO
+	DelContactCount        int
+}
+
+type wxSendMsg struct {
+	Type         int
+	Content      string
+	FromUserName string
+	ToUserName   string
+	LocalID      string
+	ClientMsgId  int64
+}
+
+type wxSendMsgReq struct {
+	BaseRequest wxBaseRequest
+	Msg         wxSendMsg
+}
+type wxSendMsgRsp struct {
+	BaseResponse wxBaseResponse
+}
+type wxMsg struct {
+	FromUserName         string
+	ToUserName           string
+	Content              string // todo
+	StatusNotifyUserName string
+	ImgWidth             int
+	PlayLength           int
+	RecommendInfo        string // todo
+	StatusNotifyCode     int
+	NewMsgId             string
+	Status               int
+	VoiceLength          int
+	ForwardFlag          int
+	AppMsgType           int
+	Ticket               string
+	AppInfo              string //todo
+	Url                  string
+	ImgStatus            int
+	MsgType              int
+	ImgHeight            int
+	MediaId              string
+	MsgId                string
+	FileName             string
+	HasProductId         int
+	FileSize             string
+	CreateTime           int64
+	SubMsgType           int
+}
+
+type wxTextMsg struct {
 }

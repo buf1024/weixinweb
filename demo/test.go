@@ -1,32 +1,47 @@
 package main
 
 import (
-	"os"
-
 	"fmt"
-	"time"
+	"os"
 
 	"github.com/buf1024/weixinweb"
 	"github.com/mdp/qrterminal"
 )
 
-func main() {
-	w := weixinweb.New()
-	url, _ := w.GetUUID()
-	qrterminal.Generate(url, qrterminal.M, os.Stdout)
-	w.Login(1)
-	w.Login(0)
+func wxWatch(c *weixinweb.WxContext) {
+	fmt.Printf("function wxWatch called\n")
+}
 
-	w.NewLoginPage()
-	w.WxInit()
-	w.StatusNotify()
-	w.GetContact()
-
-	for {
-		r, s := w.SyncCheck()
-		fmt.Printf("synccheck now = %d, r=%d, s=%d\n", time.Now().Unix(), r, s)
-		w.Sync()
-		time.Sleep(time.Second * 20)
+func wxLoop(wx *weixinweb.WxWeb, exitChan chan<- struct{}) {
+	err := wx.StartWxLoop()
+	if err != nil {
+		fmt.Printf("StartWxLoop exit, err = %s\n", err)
+		exitChan <- struct{}{}
+		return
 	}
 
+	fmt.Printf("StartWxLoop exit\n")
+	exitChan <- struct{}{}
+}
+
+func main() {
+	wx := weixinweb.New()
+	wx.Use(wxWatch)
+	qrcode, err := wx.GetQRCode()
+	if err != nil {
+		fmt.Printf("GetQRCode failed, err = %s.\n", err)
+		return
+	}
+	qrterminal.Generate(qrcode, qrterminal.M, os.Stdout)
+
+	err = wx.WaitForLogin()
+	if err != nil {
+		fmt.Printf("Loggin failed, err = %s\n", err)
+		return
+	}
+	exitChan := make(chan struct{})
+	go wxLoop(wx, exitChan)
+
+	fmt.Printf("wait for exit.\n")
+	<-exitChan
 }
