@@ -19,52 +19,24 @@ import (
 	"github.com/buf1024/golib/logging"
 )
 
-var debugFlag = true
 var log *logging.Log
 
-func debugStart() {
-	if debugFlag {
-		var err error
-		log, err = logging.NewLogging()
-		if err != nil {
-			fmt.Printf("NewLogging failed. err = %s\n", err.Error())
-			return
-		}
-		_, err = logging.SetupLog("file",
-			`{"prefix":"wx", "filedir":"./log/", "level":0, "switchsize":0, "switchtime":0}`)
-		if err != nil {
-			fmt.Printf("setup file logger failed. err = %s\n", err.Error())
-			return
-		}
-		_, err = logging.SetupLog("console", `{"level":0}`)
-		if err != nil {
-			fmt.Printf("setup file logger failed. err = %s\n", err.Error())
-			return
-		}
-		log.StartSync()
-		log.Debug("log ready\n")
-	}
-}
-func debugStop() {
-	if debugFlag {
-		log.Stop()
-	}
-}
-
 func debug(format string, a ...interface{}) {
-	if debugFlag {
+	if log != nil {
 		log.Debug(format, a...)
+		return
 	}
+	fmt.Printf(format, a...)
 }
 
 const (
 	appid       = "wx782c26e4c19acffb"
 	userAgent   = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36"
-	referer     = "https://wx2.qq.com/?&lang=zh_CN"
+	referer     = "https://wx.qq.com/"
 	jsonType    = "application/json; charset=UTF-8"
 	lang        = "zh_CN"
 	fun         = "new"
-	sysInterval = 25
+	sysInterval = 10
 )
 
 var (
@@ -124,12 +96,10 @@ type WxContext struct {
 type WxHandler func(c *WxContext)
 type WxHandlerChain []WxHandler
 
-func New() *WxWeb {
+func New(lg *logging.Log) *WxWeb {
 	w := &WxWeb{}
 	w.deviceID = w.newDeiviceID()
-
-	debugStart()
-
+	log = lg
 	return w
 }
 
@@ -258,9 +228,7 @@ func (w *WxWeb) StartWxLoop() error {
 	if err := w.StatusNotify(); err != nil {
 		return err
 	}
-	last := time.Now().Unix()
 	for {
-		now := time.Now().Unix()
 		ret, sel := w.SyncCheck()
 		debug("retcode=%d, selector=%d\n", ret, sel)
 		if ret != 0 {
@@ -275,13 +243,10 @@ func (w *WxWeb) StartWxLoop() error {
 				ctx := &WxContext{}
 				handler(ctx)
 			}
-			continue
 		}
-		sleep := now - last
-		if sleep < sysInterval {
-			time.Sleep(time.Second * time.Duration(sleep))
-		}
-		last = now
+
+		time.Sleep(time.Second * sysInterval)
+
 	}
 
 	return nil
@@ -669,84 +634,38 @@ func (w *WxWeb) SendMsg() error {
 
 }
 func (w *WxWeb) RevokeMsg() error {
-	/*
-			https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxrevokemsg
-			{
-		     BaseRequest: { Uin: xxx, Sid: xxx, Skey: xxx, DeviceID: xxx },
-		     SvrMsgId: msg_id,
-		     ToUserName: user_id,
-		     ClientMsgId: local_msg_id
-		}*/
+
 	return nil
 
 }
 func (w *WxWeb) SendMsgEmotion() error {
-	/*
-			https://wx2.qq.com/cgi-bin/mmwebwx-bin/webwxsendemoticon?fun=sys&f=json&pass_ticket=xxx
-			{
-		     BaseRequest: { Uin: xxx, Sid: xxx, Skey: xxx, DeviceID: xxx },
-		     Msg: {
-		         Type: 47 emoji消息,
-		         EmojiFlag: 2,
-		         MediaId: 表情上传后的媒体ID,
-		         FromUserName: 自己ID,
-		         ToUserName: 好友ID,
-		         LocalID: 与clientMsgId相同,
-		         ClientMsgId: 时间戳左移4位随后补上4位随机数
-		     }
-		}*/
+
 	return nil
 
 }
 
 func (w *WxWeb) GetIcon() error {
-	/*https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgeticon
-		 GET
-	params	seq: 数字，可为空
-	username: ID
-	skey: xxx
-	*/
+
 	return nil
 
 }
 func (w *WxWeb) GetHeadImg() error {
-	/*
-			url	https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetheadimg
-		method	GET
-		params	seq: 数字，可为空
-		username: 群ID
-		skey: xxx*/
+
 	return nil
 
 }
 func (w *WxWeb) GetMsgImg() error {
-	/*
-			url	https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetmsgimg
-		method	GET
-		params	MsgID: 消息ID
-		type: slave 略缩图 or 为空时加载原图
-		skey: xxx
-	*/
+
 	return nil
 
 }
 func (w *WxWeb) GetVideo() error {
-	/*
-			url	https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetvideo
-		method	GET
-		params	msgid: 消息ID
-		skey: xxx
-	*/
+
 	return nil
 
 }
 func (w *WxWeb) GetVoice() error {
-	/*
-			url	https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetvoice
-		method	GET
-		params	msgid: 消息ID
-		skey: xxx
-	*/
+
 	return nil
 
 }

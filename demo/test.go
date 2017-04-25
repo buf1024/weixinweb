@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/buf1024/golib/logging"
+
 	"github.com/buf1024/weixinweb"
 	"github.com/mdp/qrterminal"
 )
@@ -24,24 +26,60 @@ func wxLoop(wx *weixinweb.WxWeb, exitChan chan<- struct{}) {
 	exitChan <- struct{}{}
 }
 
+func setupLog(path string) *logging.Log {
+	log, err := logging.NewLogging()
+	if err != nil {
+		fmt.Printf("NewLogging failed. err = %s\n", err.Error())
+		return nil
+	}
+	_, err = logging.SetupLog("file",
+		fmt.Sprintf(`{"prefix":"wx", "filedir":"%s", "level":0, "switchsize":0, "switchtime":0}`,
+			path))
+	if err != nil {
+		fmt.Printf("setup file logger failed. err = %s\n", err.Error())
+		return nil
+	}
+	_, err = logging.SetupLog("console", `{"level":0}`)
+	if err != nil {
+		fmt.Printf("setup file logger failed. err = %s\n", err.Error())
+		return nil
+	}
+	log.StartSync()
+	return log
+}
+
+func stopLog(log *logging.Log) {
+	log.Stop()
+}
+
 func main() {
-	wx := weixinweb.New()
+	os.Mkdir("./log/", 0774)
+	log := setupLog("./log/")
+	if log == nil {
+		fmt.Printf("setup log failed.\n")
+		return
+	}
+
+	wx := weixinweb.New(log)
 	wx.Use(wxWatch)
 	qrcode, err := wx.GetQRCode()
 	if err != nil {
-		fmt.Printf("GetQRCode failed, err = %s.\n", err)
+		log.Error("GetQRCode failed, err = %s.\n", err)
+		stopLog(log)
 		return
 	}
 	qrterminal.Generate(qrcode, qrterminal.M, os.Stdout)
 
 	err = wx.WaitForLogin()
 	if err != nil {
-		fmt.Printf("Loggin failed, err = %s\n", err)
+		log.Error("Loggin failed, err = %s\n", err)
+		stopLog(log)
 		return
 	}
 	exitChan := make(chan struct{})
 	go wxLoop(wx, exitChan)
 
-	fmt.Printf("wait for exit.\n")
+	log.Info("wait for exit.\n")
 	<-exitChan
+	log.Stop()
 }
